@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="solver" basedir="." default="test-fast">
+
+    <target name="init">
+        <property name="deploy.dir" value="${basedir}/deploy"/>
+
+        <property name="solver.jar.file" value="${deploy.dir}/solver-0.2.jar"/>
+
+        <property name="build.src" value="${basedir}/build/src"/>
+
+        <property name="src.dir" value="${basedir}/src"/>
+        <property name="src.lib" value="${basedir}/lib"/>
+
+        <property name="docs.dir" value="${basedir}/docs/api"/>
+
+        <property name="test.jar.file" value="${deploy.dir}/solver-test-0.2.jar"/>
+        <property name="test.src" value="${basedir}/test/src"/>
+        <property name="test.lib" value="${basedir}/test/lib"/>
+        <property name="test.output.dir" value="${basedir}/test/reports"/>
+
+
+        <property name="debug" value="false"/>
+
+
+        <!-- prepares the DSTAMP and TSTAMP variable for creating build name-->
+        <tstamp/>
+
+        <!-- DSTAMP is automatically set to yyyymmdd, which is what we'll use for the JAR -->
+        <property name="build.name" value="${DSTAMP}-${TSTAMP}"/>
+
+        <!-- puts the environment variables into a locally accessible property -->
+        <property environment="env"/>
+
+        <path id="solver.classpath">
+            <fileset dir="${src.lib}" includes="**/*.jar"/>
+        </path>
+        <path id="test.classpath">
+            <fileset dir="${src.lib}" includes="**/*.jar"/>
+            <fileset dir="${test.lib}" includes="**/*.jar"/>
+        </path>
+    </target>
+
+
+    <!-- =================================================================== -->
+    <!-- Clean the build directory                                           -->
+    <!-- =================================================================== -->
+    <target name="clean" depends="init">
+        <delete dir="${basedir}/build" failonerror="no"/>
+        <delete dir="${deploy.dir}" failonerror="no"/>
+        <delete dir="${test.output.dir}" failonerror="no"/>
+        <delete dir="${src.dir}" failonerror="no" includes="**/*.class"/>
+        <delete dir="${test.src}" failonerror="no" includes="**/*.class"/>
+        <delete dir="${docs.dir}" failonerror="no" includes="**/*.class"/>
+    </target>
+
+    <target name="remove-logger" depends="prepare">
+
+    </target>
+
+    <!-- =================================================================== -->
+    <!-- Prepare the build directory                                         -->
+    <!-- =================================================================== -->
+    <target name="prepare" depends="init">
+        <mkdir dir="${deploy.dir}"/>
+        <mkdir dir="${test.output.dir}"/>
+        <mkdir dir="${build.src}"/>
+
+        <!--copies the source code-->
+        <copy todir="${build.src}">
+            <fileset dir="${src.dir}">
+                <exclude name="**/*.class"/>
+            </fileset>
+        </copy>
+        <!-- remove detailed calls to logger -->
+        <replaceregexp byline="true">
+            <regexp pattern="((log|LogMF)\.(trace|debug).*)"/>
+            <substitution expression="if (false) \1"/>
+            <fileset dir="${build.src}">
+                <include name="**/*.java"/>
+            </fileset>
+        </replaceregexp>
+
+    </target>
+
+
+    <!-- =================================================================== -->
+    <!-- Compiles the source code directory              "                   -->
+    <!-- =================================================================== -->
+    <target name="compile" depends="prepare">
+        <javac srcdir="${build.src}" debug="${debug}">
+            <classpath refid="solver.classpath"/>
+        </javac>
+    </target>
+
+    <target name="package" depends="compile">
+        <jar jarfile="${solver.jar.file}" basedir="${build.src}" excludes="**/*.java">
+
+        </jar>
+    </target>
+
+    <target name="compile-test" depends="package">
+        <javac srcdir="${test.src}" debug="${debug}">
+            <classpath>
+                <path refid="test.classpath"/>
+                <path path="${solver.jar.file}"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="package-test" depends="package, compile-test">
+        <jar jarfile="${test.jar.file}">
+            <fileset dir="${test.src}" excludes="**/*.java"/>
+        </jar>
+    </target>
+
+    <target name="test" depends="package-test">
+        <echo>${java.version}</echo>
+        <junit printsummary="yes" fork="yes" failureproperty="junit.failure" maxmemory="1024M">
+            <formatter type="xml"/>
+            <classpath>
+                <path refid="test.classpath"/>
+                <path path="${solver.jar.file}"/>
+                <path path="${test.jar.file}"/>
+                <path path="test/resources"/>
+                <path path="test/features"/>
+            </classpath>
+
+            <batchtest todir="${test.output.dir}">
+                <fileset dir="${test.src}">
+                    <include name="**/*Definition.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+
+    <target name="javadoc">
+        <javadoc packagenames="me.bgx.*"
+                 sourcepath="src"
+                 defaultexcludes="yes"
+                 destdir="${docs.dir}"
+                 use="true"
+                 access="private"
+                 windowtitle="Solver API">
+            <doctitle><![CDATA[<h1>Solver API</h1>]]></doctitle>
+            <tag name="todo" scope="all" description="To do:"/>
+            <!--
+            <group title="Group 1 Packages" packages="com.dummy.test.a*"/>
+            <group title="Group 2 Packages" packages="com.dummy.test.b*:com.dummy.test.c*"/>
+            <link offline="true" href="http://download.oracle.com/javase/6/docs/api/" packagelistLoc="C:\tmp"/>
+            <link href="http://developer.java.sun.com/developer/products/xml/docs/api/"/>
+            -->
+        </javadoc>
+    </target>
+
+
+    <target name="test-fast" depends="package-test">
+        <java classname="cucumber.cli.Main" fork="yes" failonerror="true" dir="${basedir}">
+            <classpath>
+                <path refid="test.classpath"/>
+                <path path="${solver.jar.file}"/>
+                <path path="${test.jar.file}"/>
+                <path path="test/resources"/>
+            </classpath>
+
+            <!--  -->
+            <arg line="-f pretty -t @fast -g me/bgx/solver/stepdefs test/features"/>
+        </java>
+    </target>
+
+</project>
