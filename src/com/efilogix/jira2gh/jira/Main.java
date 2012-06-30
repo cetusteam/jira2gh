@@ -17,20 +17,27 @@ public class Main {
         System.out.println("First chars of template: "
                 + StringUtils.left(xsltFile, 50));
         //
-        String xml = FileUtils.readFileToString(new File(args[0]));
+        File xmlFile = new File(args[0]);
+        String xml = FileUtils.readFileToString(xmlFile);
         Reader xmlReader = new StringReader(xml);
+        String dbUrl = "jdbc:hsqldb:mem:."; //"jdbc:hsqldb:file:test.database.hsql"
         //
         int baseGhIssue = Integer.parseInt(args[1]);
         //
-        ProjectCollector collector = new ProjectCollector();
-        collector.setXsltFile(xsltFile);
+        DatabaseCreator dbCreator = new DatabaseCreator();
+        dbCreator.setXml(xmlReader);
+        dbCreator.setDbUrl(dbUrl);
+        dbCreator.run();
         //
-        RssReader rssReader = new RssReader();
-        rssReader.setCollector(collector);
-        rssReader.setXml(xmlReader);
-        rssReader.run();
+        ProjectCreator pc = new ProjectCreator();
+        pc.setDbUrl(dbUrl);
+        pc.run();
         //
-        for (Project project : collector.getProjects()) {
+        System.out.println("total projects: " + pc.getProjects().size());
+        for (Project project : pc.getProjects()) {
+            if (!project.key.equals("PER")) {
+                continue;
+            }
             Converter conv = new Converter();
             conv.setProject(project);
             conv.setBaseGhIssue(baseGhIssue);

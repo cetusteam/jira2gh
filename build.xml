@@ -29,10 +29,6 @@
         <path id="jira2gh.classpath">
             <fileset dir="${src.lib}" includes="**/*.jar"/>
         </path>
-        <path id="test.classpath">
-            <fileset dir="${src.lib}" includes="**/*.jar"/>
-            <fileset dir="${test.lib}" includes="**/*.jar"/>
-        </path>
     </target>
 
 
@@ -42,9 +38,7 @@
     <target name="clean" depends="init">
         <delete dir="${basedir}/build" failonerror="no"/>
         <delete dir="${deploy.dir}" failonerror="no"/>
-        <delete dir="${test.output.dir}" failonerror="no"/>
         <delete dir="${src.dir}" failonerror="no" includes="**/*.class"/>
-        <delete dir="${test.src}" failonerror="no" includes="**/*.class"/>
         <delete dir="${docs.dir}" failonerror="no" includes="**/*.class"/>
     </target>
 
@@ -57,7 +51,6 @@
     <!-- =================================================================== -->
     <target name="prepare" depends="init">
         <mkdir dir="${deploy.dir}"/>
-        <mkdir dir="${test.output.dir}"/>
         <mkdir dir="${build.src}"/>
 
         <!--copies the source code-->

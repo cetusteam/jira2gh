@@ -13,9 +13,8 @@ public class Converter implements Runnable {
 
     private int baseGhIssue = -1;
 
-    // private List<String> milestones;
-    //
-    // List<String> createdMilestones;
+    Pattern p = Pattern.compile("(" + project.key + "-[0-9]+)([^0-9])");
+
     private Map<String, Integer> issuesMap = new HashMap<String, Integer>();
 
     @Override
@@ -23,7 +22,6 @@ public class Converter implements Runnable {
         System.out.println("Converting project:" + project.name + " Key:"
                 + project.key + " Issues:" + project.issues.size());
         mapIssues();
-        Pattern p = Pattern.compile("(" + project.key + "-[0-9])+[^0-9]");
         for (Issue issue : project.issues) {
             StringBuilder bodyBuilder = new StringBuilder(issue.body);
             // add information about related issue
@@ -43,25 +41,29 @@ public class Converter implements Runnable {
             }
             // replaces body
             issue.body = bodyBuilder.toString();
-            // map issues in the body
-            Matcher m = p.matcher(issue.body);
-            StringBuffer sb = new StringBuffer();
-            while (m.find()) {
-                String key = m.group(1);
-                Integer ghId = issuesMap.get(key);
-                if (ghId == null) {
-                    throw new RuntimeException("Issue " + key
-                            + " not found in the project. List of issues:"
-                            + issuesMap.keySet());
-                }
-                m.appendReplacement(sb, "#" + ghId);
+            issue.body = ticketReplacer(issue.body);
+            for (Comment comment : issue.comments) {
+                comment.comment = ticketReplacer(comment.comment);
             }
-            m.appendTail(sb);
         }
-        for (Issue issue : project.issues) {
-            System.out.println("------------");
-            System.out.println("body:" + issue.body);
+    }
+
+    private String ticketReplacer(String body) {
+        // map issues in the body
+        Matcher m = p.matcher(body);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String key = m.group(1);
+            Integer ghId = issuesMap.get(key);
+            if (ghId == null) {
+                throw new RuntimeException("Issue " + key
+                        + " not found in the project. List of issues:"
+                        + issuesMap.keySet());
+            }
+            m.appendReplacement(sb, "#" + ghId + m.group(2));
         }
+        m.appendTail(sb);
+        return sb.toString();
     }
 
     private void mapIssues() {
