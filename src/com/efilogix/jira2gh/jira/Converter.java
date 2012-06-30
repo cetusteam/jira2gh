@@ -42,7 +42,7 @@ public class Converter implements Runnable {
                 }
             }
             // add resolution information
-            if (issue.closed && issue.resolution.equals("FIXED")) {
+            if (issue.closed) {
                 bodyBuilder.append("\n\nResolution: " + issue.resolution);
             }
             // replaces body
