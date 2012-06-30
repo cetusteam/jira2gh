@@ -16,6 +16,8 @@ public class ProjectCreator {
 
     List<Project> projects = new ArrayList<Project>();
 
+    private int baseGhIssue = -1;
+
     private String dbUrl;
 
     public void run() throws Exception {
@@ -57,7 +59,8 @@ public class ProjectCreator {
             ps = connection
                     .prepareStatement("select issue.jg_key, st.jg_name, issue.jg_summary, issue.jg_description, issue.jg_assignee "
                             + " from t_issue issue, t_project p, t_status st "
-                            + " where issue.jg_project = p.jg_id and st.jg_id = issue.jg_status");
+                            + " where issue.jg_project = p.jg_id and st.jg_id = issue.jg_status and p.jg_key = ?");
+            ps.setString(1, p.key);
             ps.execute();
             rs = ps.getResultSet();
             while (rs.next()) {
@@ -72,17 +75,62 @@ public class ProjectCreator {
                         || issue.resolution.equals("Resolved")) {
                     issue.closed = true;
                 }
+                findRelations(issue);
             }
         }
         ps.close();
         // attributes for each issue
         for (Project p : projects) {
+            int i = -1;
             for (Issue issue : p.issues) {
+                i++;
+                issue.ghId = i + baseGhIssue;
                 issue.comments = listComments(issue.key);
                 issue.milestone = selectMilestones(p, issue.key);
             }
         }
         connection.close();
+    }
+
+    private void findRelations(Issue issue) throws SQLException {
+        //        String sql = "select ltype.jg_outward, dest.jg_key "
+        //                + "from t_issuelink link, t_issuelinktype ltype, t_issue source, t_issue dest "
+        //                + "where link.jg_linktype=ltype.jg_id "
+        //                + "  and link.jg_destination=dest.jg_id "
+        //                + "  and link.jg_source=source.jg_id "
+        //                + "  and source.jg_key = ?";
+        String sql = "select linktype.jg_inward, linktype.jg_outward, src.jg_key, dest.jg_key "
+                + "from t_issuelink link, t_issuelinktype linktype, t_issue src, t_issue dest "
+                + "where link.jg_linktype    = linktype.jg_id "
+                + "  and link.jg_destination = dest.jg_id "
+                + "  and link.jg_source      = src.jg_id "
+                + "  and (src.jg_key = ? or dest.jg_key = ?)";
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setString(1, issue.key);
+        ps.setString(2, issue.key);
+        ps.execute();
+        ResultSet rs = ps.getResultSet();
+        while (rs.next()) {
+            String relIn = rs.getString(1);
+            String relOut = rs.getString(2);
+            String src = rs.getString(3);
+            String dest = rs.getString(4);
+            String rel;
+            String key;
+            if (StringUtils.equals(issue.key, src)) {
+                rel = relOut;
+                key = dest;
+            } else {
+                rel = relIn;
+                key = src;
+            }
+            List<String> lst = issue.relations.get(rel);
+            if (lst == null) {
+                issue.relations.put(rel, lst = new ArrayList<String>());
+            }
+            lst.add(key);
+        }
+        ps.close();
     }
 
     private String selectMilestones(Project p, String key) throws SQLException {
@@ -140,5 +188,9 @@ public class ProjectCreator {
 
     public List<Project> getProjects() {
         return projects;
+    }
+
+    public void setBaseGhIssue(int baseGhIssue) {
+        this.baseGhIssue = baseGhIssue;
     }
 }

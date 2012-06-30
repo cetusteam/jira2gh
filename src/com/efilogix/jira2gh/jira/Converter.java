@@ -1,27 +1,26 @@
 package com.efilogix.jira2gh.jira;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.lang3.StringUtils;
 
 /** reads all the data and rename issues */
 public class Converter implements Runnable {
 
     private Project project;
 
-    private int baseGhIssue = -1;
+    private List<Project> projects;
 
-    Pattern p = Pattern.compile("(" + project.key + "-[0-9]+)([^0-9])");
-
-    private Map<String, Integer> issuesMap = new HashMap<String, Integer>();
+    private Pattern issuePattern;
 
     @Override
     public void run() {
         System.out.println("Converting project:" + project.name + " Key:"
                 + project.key + " Issues:" + project.issues.size());
-        mapIssues();
+        issuePattern = Pattern.compile("(" + project.key + "-[0-9]+)([^0-9])");
         for (Issue issue : project.issues) {
             StringBuilder bodyBuilder = new StringBuilder(issue.body);
             // add information about related issue
@@ -29,9 +28,16 @@ public class Converter implements Runnable {
                 bodyBuilder.append("\n\n");
                 for (Map.Entry<String, List<String>> relationE : issue.relations
                         .entrySet()) {
-                    bodyBuilder.append(relationE.getKey() + ":\n");
+                    bodyBuilder.append("this ticket " + relationE.getKey()
+                            + ":\n");
                     for (String key : relationE.getValue()) {
-                        bodyBuilder.append(" * " + key + "\n");
+                        bodyBuilder.append(" * " + key);
+                        String relPrjKey = StringUtils
+                                .substringBefore(key, "-");
+                        Project relProj = findProject(relPrjKey);
+                        bodyBuilder.append(" ").append(
+                                findIssue(relProj, key).title);
+                        bodyBuilder.append("\n");
                     }
                 }
             }
@@ -45,40 +51,53 @@ public class Converter implements Runnable {
             for (Comment comment : issue.comments) {
                 comment.comment = ticketReplacer(comment.comment);
             }
+            System.out.println("----------------------");
+            System.out.println("issue #:" + issue.ghId + "   " + issue.key);
+            System.out.println("body:" + issue.body);
         }
+    }
+
+    private Issue findIssue(String key) {
+        Project p = findProject(StringUtils.substringBefore(key, "-"));
+        return findIssue(p, key);
+    }
+
+    private Issue findIssue(Project relProj, String key) {
+        for (Issue issue : relProj.issues) {
+            if (issue.key.equals(key)) {
+                return issue;
+            }
+        }
+        return null;
+    }
+
+    private Project findProject(String relPrjKey) {
+        for (Project p : projects) {
+            if (p.key.startsWith(relPrjKey)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     private String ticketReplacer(String body) {
         // map issues in the body
-        Matcher m = p.matcher(body);
+        Matcher m = issuePattern.matcher(body);
         StringBuffer sb = new StringBuffer();
         while (m.find()) {
             String key = m.group(1);
-            Integer ghId = issuesMap.get(key);
-            if (ghId == null) {
-                throw new RuntimeException("Issue " + key
-                        + " not found in the project. List of issues:"
-                        + issuesMap.keySet());
-            }
-            m.appendReplacement(sb, "#" + ghId + m.group(2));
+            Issue issue = findIssue(key);
+            m.appendReplacement(sb, "#" + issue.ghId + m.group(2));
         }
         m.appendTail(sb);
         return sb.toString();
     }
 
-    private void mapIssues() {
-        int ghId = baseGhIssue;
-        for (Issue issue : project.issues) {
-            issuesMap.put(issue.key, ghId);
-            ghId++;
-        }
-    }
-
-    public void setBaseGhIssue(int baseGhIssue) {
-        this.baseGhIssue = baseGhIssue;
-    }
-
     public void setProject(Project project) {
         this.project = project;
+    }
+
+    public void setProjects(List<Project> projects) {
+        this.projects = projects;
     }
 }

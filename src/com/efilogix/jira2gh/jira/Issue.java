@@ -7,6 +7,8 @@ import java.util.Map;
 
 public class Issue {
 
+    public int ghId = -1; // github id base
+
     public String key; // JIRA: key
 
     public String title; // JIRA: summary
