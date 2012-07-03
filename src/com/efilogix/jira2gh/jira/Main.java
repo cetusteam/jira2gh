@@ -9,11 +9,15 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.AutoCloseInputStream;
 import org.apache.commons.lang3.StringUtils;
 
+import com.efilogix.jira2gh.UploadToGithub;
+
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        String xsltFile = IOUtils.toString(new AutoCloseInputStream(ClassLoader
-                .getSystemResourceAsStream("markdown.xslt")), "iso-8859-1");
+        String xsltFile = IOUtils.toString(
+                new AutoCloseInputStream(ClassLoader
+                        .getSystemResourceAsStream("markdown.xslt")),
+                "iso-8859-1");
         System.out.println("First chars of template: "
                 + StringUtils.left(xsltFile, 50));
         //
@@ -36,5 +40,9 @@ public class Main {
             conv.setBaseGhIssue(baseGhIssue);
             conv.run();
         }
+        // Upload the project data to github
+        UploadToGithub github = new UploadToGithub();
+        github.setCollector(collector);
+        // github.run();
     }
 }
