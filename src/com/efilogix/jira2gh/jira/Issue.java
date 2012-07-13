@@ -1,10 +1,13 @@
 package com.efilogix.jira2gh.jira;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class Issue {
+
+    public int ghId = -1; // github id base
 
     public String key; // JIRA: key
 
@@ -14,11 +17,13 @@ public class Issue {
 
     public String assignee; // JIRA: ??? (optional) 
 
-    public int milestone = -1; // JIRA: version optional. -1 for none
+    public String milestone; // JIRA: comma separated, first is most recent
 
     public boolean closed;
 
     public String resolution;
+
+    public List<Comment> comments = new ArrayList<Comment>();
 
     public Map<String, List<String>> relations = new HashMap<String, List<String>>();
 }

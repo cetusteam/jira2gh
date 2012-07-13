@@ -5,44 +5,36 @@ import java.io.Reader;
 import java.io.StringReader;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.AutoCloseInputStream;
-import org.apache.commons.lang3.StringUtils;
-
-import com.efilogix.jira2gh.UploadToGithub;
 
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        String xsltFile = IOUtils.toString(
-                new AutoCloseInputStream(ClassLoader
-                        .getSystemResourceAsStream("markdown.xslt")),
-                "iso-8859-1");
-        System.out.println("First chars of template: "
-                + StringUtils.left(xsltFile, 50));
-        //
-        String xml = FileUtils.readFileToString(new File(args[0]));
+        File xmlFile = new File(args[0]);
+        String xml = FileUtils.readFileToString(xmlFile);
         Reader xmlReader = new StringReader(xml);
+        String dbUrl = "jdbc:hsqldb:mem:."; //"jdbc:hsqldb:file:test.database.hsql"
         //
         int baseGhIssue = Integer.parseInt(args[1]);
         //
-        ProjectCollector collector = new ProjectCollector();
-        collector.setXsltFile(xsltFile);
+        DatabaseCreator dbCreator = new DatabaseCreator();
+        dbCreator.setXml(xmlReader);
+        dbCreator.setDbUrl(dbUrl);
+        dbCreator.run();
         //
-        RssReader rssReader = new RssReader();
-        rssReader.setCollector(collector);
-        rssReader.setXml(xmlReader);
-        rssReader.run();
+        ProjectCreator pc = new ProjectCreator();
+        pc.setDbUrl(dbUrl);
+        pc.setBaseGhIssue(baseGhIssue);
+        pc.run();
         //
-        for (Project project : collector.getProjects()) {
+        System.out.println("total projects: " + pc.getProjects().size());
+        for (Project project : pc.getProjects()) {
+            if (!project.key.equals("PER")) {
+                continue;
+            }
             Converter conv = new Converter();
             conv.setProject(project);
-            conv.setBaseGhIssue(baseGhIssue);
+            conv.setProjects(pc.getProjects());
             conv.run();
         }
-        // Upload the project data to github
-        UploadToGithub github = new UploadToGithub();
-        github.setCollector(collector);
-        // github.run();
     }
 }
