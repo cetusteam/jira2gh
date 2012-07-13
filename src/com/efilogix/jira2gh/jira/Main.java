@@ -6,13 +6,15 @@ import java.io.StringReader;
 
 import org.apache.commons.io.FileUtils;
 
+import com.efilogix.jira2gh.UploadToGithub;
+
 public class Main {
 
     public static void main(String[] args) throws Exception {
         File xmlFile = new File(args[0]);
         String xml = FileUtils.readFileToString(xmlFile);
         Reader xmlReader = new StringReader(xml);
-        String dbUrl = "jdbc:hsqldb:mem:."; //"jdbc:hsqldb:file:test.database.hsql"
+        String dbUrl = "jdbc:hsqldb:mem:."; // "jdbc:hsqldb:file:test.database.hsql"
         //
         int baseGhIssue = Integer.parseInt(args[1]);
         //
@@ -36,5 +38,9 @@ public class Main {
             conv.setProjects(pc.getProjects());
             conv.run();
         }
+        // Upload the project data to github
+        UploadToGithub github = new UploadToGithub();
+        github.setProjectCreator(pc);
+        // github.run();
     }
 }

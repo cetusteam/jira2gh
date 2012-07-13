@@ -13,7 +13,7 @@ import org.eclipse.egit.github.core.service.UserService;
 
 import com.efilogix.jira2gh.jira.Issue;
 import com.efilogix.jira2gh.jira.Project;
-import com.efilogix.jira2gh.jira.ProjectCollector;
+import com.efilogix.jira2gh.jira.ProjectCreator;
 
 public class UploadToGithub implements Runnable {
 
@@ -30,17 +30,17 @@ public class UploadToGithub implements Runnable {
         userMatching.put("aldemar", "avillegas");
     }
     private Map<String, User> githubUsers = new HashMap<String, User>();
-    private ProjectCollector collector;
+    private ProjectCreator projectCreator;
     private List<Repository> repositories;
 
-    public void setCollector(ProjectCollector collector) {
-        this.collector = collector;
+    public void setProjectCreator(ProjectCreator projectCreator) {
+        this.projectCreator = projectCreator;
     }
 
     private void doRequest() {
         getGithubRepositories();
         getGithubUsers();
-        for (Project project : collector.getProjects()) {
+        for (Project project : projectCreator.getProjects()) {
             System.out.println("collector project name " + project.name);
             if (projectMatching.containsKey(project.name)) {
                 uploadIssuesToProject(projectMatching.get(project.name),
